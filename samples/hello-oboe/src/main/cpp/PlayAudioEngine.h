@@ -17,11 +17,7 @@
 #ifndef OBOE_HELLOOBOE_PLAYAUDIOENGINE_H
 #define OBOE_HELLOOBOE_PLAYAUDIOENGINE_H
 
-#include <thread>
-#include <array>
 #include <oboe/Oboe.h>
-
-#include "shared/Mixer.h"
 
 #include "SoundGenerator.h"
 
@@ -32,15 +28,16 @@ class PlayAudioEngine : oboe::AudioStreamCallback {
 public:
     PlayAudioEngine();
 
-    ~PlayAudioEngine();
 
     void setAudioApi(oboe::AudioApi audioApi);
 
     void setDeviceId(int32_t deviceId);
 
-    void setToneOn(bool isToneOn);
+    void setChannelCount(int channelCount);
 
     void setBufferSizeInBursts(int32_t numBursts);
+
+    void setToneOn(bool isToneOn);
 
     double getCurrentOutputLatencyMillis();
 
@@ -52,30 +49,21 @@ public:
 
     void onErrorAfterClose(oboe::AudioStream *oboeStream, oboe::Result error);
 
-    void setChannelCount(int channelCount);
+
 
 private:
-    oboe::AudioApi mAudioApi = oboe::AudioApi::Unspecified;
-    int32_t mPlaybackDeviceId = oboe::kUnspecified;
-    int32_t mSampleRate;
-    int32_t mChannelCount = 2; // Stereo
-    int32_t mFramesPerBurst;
+    oboe::ManagedStream mPlayStream;
     double mCurrentOutputLatencyMillis = 0;
-    int32_t mBufferSizeSelection = kBufferSizeAutomatic;
+    int32_t mBufferSizeSelection = kBufferSizeAutomatic; // Used to keep track if we are auto tuning
     bool mIsLatencyDetectionSupported = false;
-    oboe::AudioStream *mPlayStream;
     std::unique_ptr<oboe::LatencyTuner> mLatencyTuner;
-    std::mutex mRestartingLock;
     std::unique_ptr<SoundGenerator> mSoundGenerator;
     std::unique_ptr<float[]> mConversionBuffer { nullptr };
+    // We will handle conversion to avoid getting kicked off the fast track as penalty
 
-    void createPlaybackStream();
+    void createPlaybackStream(oboe::AudioStreamBuilder *builder);
 
-    void closeOutputStream();
-
-    void restartStream();
-
-    void setupPlaybackStreamParameters(oboe::AudioStreamBuilder *builder);
+    void restartStream(oboe::AudioStreamBuilder *builder);
 
     oboe::Result calculateCurrentOutputLatencyMillis(oboe::AudioStream *stream, double *latencyMillis);
 
